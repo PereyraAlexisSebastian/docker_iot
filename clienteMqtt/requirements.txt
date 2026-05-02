@@ -1,3 +1,6 @@
-aiomqtt==2.0.1
-certifi==2024.2.2
-environs==11.0.0
+aiomqtt==2.5.1
+certifi==2026.4.22
+environs==15.0.1
+marshmallow==4.3.0
+paho-mqtt==2.1.0
+python-dotenv==1.2.2
