@@ -49,7 +49,7 @@ async def main():
     except (asyncio.CancelledError, KeyboardInterrupt):
         pass
     finally:
-        print("mqtt final")
+        print("Buen intento")
 
 if __name__ == "__main__":
     asyncio.run(main())
