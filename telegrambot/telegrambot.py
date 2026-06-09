@@ -15,8 +15,7 @@ import paho.mqtt.client as mqtt
 estado_placa = {
     "setpoint": "Esperando...",
     "periodo": "Esperando...",
-    "modo": "Esperando...",
-    "rele": "Esperando..."
+    "modo": "Esperando..."
 }
 
 # --- FUNCIONES DEL ESCUCHADOR MQTT ---
@@ -39,8 +38,6 @@ def al_recibir_mensaje(client, userdata, msg):
             estado_placa["periodo"] = datos["Periodo"]
         if "Modo" in datos:
             estado_placa["modo"] = datos["Modo"]
-        if "rele" in datos:
-            estado_placa["rele"] = datos["rele"]
             
     except Exception as e:
         # Si llega algo que no es JSON (ej: la palabra "on" del relé), lo ignora sin crashear
@@ -136,7 +133,6 @@ async def consultar_estado(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🎯 Setpoint: {estado_placa['setpoint']}\n"
         f"⏱️ Periodo: {estado_placa['periodo']} seg\n"
         f"⚙️ Modo: {estado_placa['modo']}\n"
-        f"⚙️ rele: {estado_placa['rele']}\n"
 
     )
     await context.bot.send_message(update.message.chat.id, text=texto)
