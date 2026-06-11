@@ -3,6 +3,8 @@ import aiomqtt
 
 logging.basicConfig(format='%(asctime)s - cliente mqtt - %(levelname)s:%(message)s', level=logging.INFO, datefmt='%d/%m/%Y %H:%M:%S %z')
 
+
+
 async def main():
 
     tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)

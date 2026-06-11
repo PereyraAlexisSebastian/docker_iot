@@ -1,0 +1,8 @@
+services:
+  crud:
+    environment:
+      - FLASK_DEBUG=1       # Agregamos la variable para el auto-reinicio
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./crud:/app         # Agregamos el volumen para ver cambios en vivo
