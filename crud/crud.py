@@ -30,7 +30,7 @@ MQTT_PASS = os.environ.get("MQTT_PASS")
 logging.basicConfig(format='%(asctime)s - CRUD - %(levelname)s - %(message)s', level=logging.INFO)
 
 app = Flask(__name__)
-
+#Comentar la linea para probar//primero terminar el ejer. 
 app.wsgi_app = ProxyFix(
     app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
 )
