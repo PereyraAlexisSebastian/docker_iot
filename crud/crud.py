@@ -235,49 +235,51 @@ def panel_iot():
         
     return render_template('comandos.html')
 
+    
 @app.route('/enviar_comando', methods=['POST'])
 def enviar_comando():
     # 1. Capturamos los datos básicos
     nodo_destino = request.form.get('nodo')
     comando = request.form.get('comando')
 
-    # 2. Asignamos el valor final
+    # 2. Asignamos el valor correcto dependiendo de qué radio button eligió el usuario
     if comando == "destello":
         valor_final = "on"
     elif comando in ["setpoint", "periodo"]:
+        # Capturamos el input numérico
         valor_final = request.form.get('valor_numerico')
     elif comando == "modo":
+        # Capturamos el selector de modo (auto/manual)
         valor_final = request.form.get('valor_modo')
     elif comando == "rele":
+        # Capturamos el selector del relé (on/off)
         valor_final = request.form.get('valor_rele')
 
-    # 3. Construimos el Topic y el JSON
+    # 3. Construimos el Topic (Ej: los_masones/periodo)
     topic = f"{nodo_destino}/{comando}"
+    
+    # 4. Empaquetamos en JSON idéntico a tu bot de Telegram
     datos = {"msg": valor_final}
     payload = json.dumps(datos)
 
     try:
-        # 4. Configuramos credenciales si existen
-        auth_dict = None
+        # Iniciamos el cliente MQTT
+        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        
         if MQTT_USER and MQTT_PASS:
-            auth_dict = {'username': MQTT_USER, 'password': MQTT_PASS}
+            client.username_pw_set(MQTT_USER, MQTT_PASS)
 
-        # 5. Configuramos TLS (La "S" de MQTTS)
-        tls_dict = {'cert_reqs': ssl.CERT_NONE} 
+        # Encriptación TLS/SSL
+        client.tls_set(cert_reqs=ssl.CERT_NONE) 
+        
+        # Conectamos y enviamos el JSON
+        client.connect(MQTT_BROKER, MQTT_PORT, 60)
+        client.publish(topic, payload)
+        client.disconnect()
 
-        # 6. ENVIAMOS USANDO PUBLISH.SINGLE (El mismo método que tu bot)
-        publish.single(
-            topic=topic,
-            payload=payload,
-            hostname=MQTT_BROKER,
-            port=MQTT_PORT,
-            auth=auth_dict,
-        )
-
-        flash(f"Comando enviado: {topic} -> {payload}", "success")
+        flash(f"Comando enviado a {topic}: {payload}", "success")
         
     except Exception as e:
-        flash(f"Error al enviar a Mosquitto: {str(e)}", "danger")
+        flash(f"Error al enviar comando MQTT: {str(e)}", "danger")
 
-    # Regresamos a la página anterior
-    return redirect(request.referrer or url_for('panel_iot'))
+    return redirect(url_for('panel_iot'))
