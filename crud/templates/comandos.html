@@ -1,0 +1,101 @@
+{% extends "layout.html" %}
+{% block body %}
+<form action="{{ url_for('enviar_comando') }}" method="POST">
+  
+  <div class="mb-4">
+    <label for="nodo" class="form-label fw-bold">Seleccionar Nodo Destino:</label>
+    <select class="form-select" id="nodo" name="nodo" required>
+      <option value="los_masones" selected> Los Masones </option>
+    </select>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label fw-bold">Acción a enviar:</label>
+    
+    <div class="form-check">
+      <input class="form-check-input radio-comando" type="radio" name="comando" id="cmd_destello" value="destello" checked>
+      <label class="form-check-label" for="cmd_destello">✨ Enviar Destello</label>
+    </div>
+    
+    <div class="form-check">
+      <input class="form-check-input radio-comando" type="radio" name="comando" id="cmd_setpoint" value="setpoint">
+      <label class="form-check-label" for="cmd_setpoint">🎛️ Modificar Setpoint</label>
+    </div>
+
+    <div class="form-check">
+      <input class="form-check-input radio-comando" type="radio" name="comando" id="cmd_periodo" value="periodo">
+      <label class="form-check-label" for="cmd_periodo">⏱️ Modificar Periodo</label>
+    </div>
+
+    <div class="form-check">
+      <input class="form-check-input radio-comando" type="radio" name="comando" id="cmd_modo" value="modo">
+      <label class="form-check-label" for="cmd_modo">⚙️ Cambiar Modo (Auto / Manual)</label>
+    </div>
+
+    <div class="form-check">
+      <input class="form-check-input radio-comando" type="radio" name="comando" id="cmd_rele" value="rele">
+      <label class="form-check-label" for="cmd_rele">🔌 Controlar Relé (ON / OFF)</label>
+    </div>
+  </div>
+
+  <div class="mb-4" id="div_numerico" style="display: none;">
+    <label id="label_numerico" for="valor_numerico" class="form-label text-primary fw-bold">Valor:</label>
+    <input type="number" class="form-control border-primary" id="valor_numerico" name="valor_numerico" placeholder="Ingrese un número">
+  </div>
+
+  <div class="mb-4" id="div_modo" style="display: none;">
+    <label class="form-label text-primary fw-bold">Seleccionar Modo:</label>
+    <select class="form-select border-primary" id="valor_modo" name="valor_modo">
+      <option value="auto">Automático</option>
+      <option value="manual">Manual</option>
+    </select>
+  </div>
+
+  <div class="mb-4" id="div_rele" style="display: none;">
+    <label class="form-label text-primary fw-bold">Estado del Relé:</label>
+    <select class="form-select border-primary" id="valor_rele" name="valor_rele">
+      <option value="on">Encendido (ON)</option>
+      <option value="off">Apagado (OFF)</option>
+    </select>
+  </div>
+
+  <button type="submit" class="btn btn-primary w-100 mt-2">
+    🚀 Enviar Instrucción a la Placa
+  </button>
+  
+</form>
+
+<script>
+  // Capturamos todos los radio buttons
+  const radios = document.querySelectorAll('.radio-comando');
+  
+  radios.forEach(radio => {
+    radio.addEventListener('change', function() {
+      
+      // 1. Ocultamos todas las opciones secundarias por defecto
+      document.getElementById('div_numerico').style.display = 'none';
+      document.getElementById('div_modo').style.display = 'none';
+      document.getElementById('div_rele').style.display = 'none';
+      
+      // 2. Le quitamos la obligatoriedad al campo numérico
+      document.getElementById('valor_numerico').required = false;
+
+      // 3. Mostramos la opción correcta según el radio seleccionado
+      const seleccion = this.value;
+
+      if (seleccion === 'setpoint' || seleccion === 'periodo') {
+        document.getElementById('div_numerico').style.display = 'block';
+        document.getElementById('valor_numerico').required = true;
+        // Cambiamos el texto de la etiqueta para que sea más descriptivo
+        document.getElementById('label_numerico').innerText = seleccion === 'setpoint' ? 'Valor del Setpoint:' : 'Valor del Periodo (segundos):';
+      
+      } else if (seleccion === 'modo') {
+        document.getElementById('div_modo').style.display = 'block';
+      
+      } else if (seleccion === 'rele') {
+        document.getElementById('div_rele').style.display = 'block';
+      }
+    });
+  });
+</script>
+{% endblock %} 

@@ -13,6 +13,19 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.ticker as ticker
 
+import paho.mqtt.client as mqtt
+import ssl
+import json
+import paho.mqtt.publish as publish
+import os
+
+# Usamos .get() para que no crashee si la variable llega a faltar
+MQTT_BROKER = "mosquitto"
+MQTT_PORT =8883
+
+MQTT_USER = os.environ.get("MQTT_USR") 
+MQTT_PASS = os.environ.get("MQTT_PASS")
+
 
 logging.basicConfig(format='%(asctime)s - CRUD - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -212,3 +225,59 @@ def graficos(variable,mod):
     FigureCanvasSVG(fig).print_svg(buffer, metadata={'Creator': 'gax', 'Title': 'Awesome'})
     return Response(buffer.getvalue(), mimetype="image/svg+xml")
 
+from flask import render_template # Asegúrate de tener esto importado arriba
+
+@app.route('/comandos')
+def panel_iot():
+    # Validamos que solo los que iniciaron sesión puedan entrar (opcional, pero recomendado)
+    if not session.get("user_id"):
+        return redirect(url_for('login')) # O como se llame tu ruta de login
+        
+    return render_template('comandos.html')
+
+@app.route('/enviar_comando', methods=['POST'])
+def enviar_comando():
+    # 1. Capturamos los datos básicos
+    nodo_destino = request.form.get('nodo')
+    comando = request.form.get('comando')
+
+    # 2. Asignamos el valor final
+    if comando == "destello":
+        valor_final = "on"
+    elif comando in ["setpoint", "periodo"]:
+        valor_final = request.form.get('valor_numerico')
+    elif comando == "modo":
+        valor_final = request.form.get('valor_modo')
+    elif comando == "rele":
+        valor_final = request.form.get('valor_rele')
+
+    # 3. Construimos el Topic y el JSON
+    topic = f"{nodo_destino}/{comando}"
+    datos = {"msg": valor_final}
+    payload = json.dumps(datos)
+
+    try:
+        # 4. Configuramos credenciales si existen
+        auth_dict = None
+        if MQTT_USER and MQTT_PASS:
+            auth_dict = {'username': MQTT_USER, 'password': MQTT_PASS}
+
+        # 5. Configuramos TLS (La "S" de MQTTS)
+        tls_dict = {'cert_reqs': ssl.CERT_NONE} 
+
+        # 6. ENVIAMOS USANDO PUBLISH.SINGLE (El mismo método que tu bot)
+        publish.single(
+            topic=topic,
+            payload=payload,
+            hostname=MQTT_BROKER,
+            port=MQTT_PORT,
+            auth=auth_dict,
+        )
+
+        flash(f"Comando enviado: {topic} -> {payload}", "success")
+        
+    except Exception as e:
+        flash(f"Error al enviar a Mosquitto: {str(e)}", "danger")
+
+    # Regresamos a la página anterior
+    return redirect(request.referrer or url_for('panel_iot'))
