@@ -19,21 +19,17 @@ import json
 import paho.mqtt.publish as publish
 import os
 
-# Usamos .get() para que no crashee si la variable llega a faltar
-MQTT_BROKER = "mosquitto"
-MQTT_PORT =8883
-
-MQTT_USER = os.environ.get("MQTT_USR") 
-MQTT_PASS = os.environ.get("MQTT_PASS")
-
 
 logging.basicConfig(format='%(asctime)s - CRUD - %(levelname)s - %(message)s', level=logging.INFO)
 
 app = Flask(__name__)
-#Comentar la linea para probar//primero terminar el ejer. 
+
 app.wsgi_app = ProxyFix(
     app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
 )
+
+app.config["MQTT_USER"] = os.environ.get("MQTT_USER")  
+app.config["MQTT_PASS"] = os.environ.get("MQTT_PASS") 
 
 app.secret_key = os.environ["FLASK_SECRET_KEY"]
 app.config["MYSQL_USER"] = os.environ["MYSQL_USER"]
@@ -184,8 +180,8 @@ def graficos(variable,mod):
         return "Variable no permitida"
     
     x = mysql.connection.cursor()
-    x.execute("USE sensores_remotos") # dar permisos SELECT al usuario crud 
-
+    x.execute("USE sensores_remotos") 
+    
     fig, ax = plt.subplots(figsize=(20, 10))
     consulta=f"""SELECT timestamp, {variable}
             FROM (
@@ -225,20 +221,25 @@ def graficos(variable,mod):
     FigureCanvasSVG(fig).print_svg(buffer, metadata={'Creator': 'gax', 'Title': 'Awesome'})
     return Response(buffer.getvalue(), mimetype="image/svg+xml")
 
-from flask import render_template # Asegúrate de tener esto importado arriba
+from flask import render_template 
 
 @app.route('/comandos')
 def panel_iot():
-    # Validamos que solo los que iniciaron sesión puedan entrar (opcional, pero recomendado)
+    # Validamos que solo los que iniciaron sesión 
     if not session.get("user_id"):
-        return redirect(url_for('login')) # O como se llame tu ruta de login
+        return redirect(url_for('login')) 
         
     return render_template('comandos.html')
 
     
 @app.route('/enviar_comando', methods=['POST'])
 def enviar_comando():
-    # 1. Capturamos los datos básicos
+    MQTT_BROKER = "mosquitto"
+    MQTT_PORT =8883
+    usuario_mqtt = app.config.get("MQTT_USER")
+    clave_mqtt = app.config.get("MQTT_PASS")
+
+
     nodo_destino = request.form.get('nodo')
     comando = request.form.get('comando')
 
@@ -261,25 +262,31 @@ def enviar_comando():
     # 4. Empaquetamos en JSON idéntico a tu bot de Telegram
     datos = {"msg": valor_final}
     payload = json.dumps(datos)
-
     try:
-        # Iniciamos el cliente MQTT
-        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-        
-        if MQTT_USER and MQTT_PASS:
-            client.username_pw_set(MQTT_USER, MQTT_PASS)
+        # Configuramos credenciales
+        auth_dict = None
+        if usuario_mqtt and clave_mqtt:
+            auth_dict = {'username': usuario_mqtt, 'password': clave_mqtt}
 
-        # Encriptación TLS/SSL
-        client.tls_set(cert_reqs=ssl.CERT_NONE) 
         
-        # Conectamos y enviamos el JSON
-        client.connect(MQTT_BROKER, MQTT_PORT, 60)
-        client.publish(topic, payload)
-        client.disconnect()
+        
+        tls_dict = {
+            'cert_reqs': ssl.CERT_NONE
+        } 
 
-        flash(f"Comando enviado a {topic}: {payload}", "success")
+        # Enviamos el mensaje con el TLS activado
+        publish.single(
+            topic=topic,
+            payload=payload,
+            hostname=MQTT_BROKER,  
+            port=8883,             
+            auth=auth_dict,
+            tls=tls_dict           
+        )
+
+        flash(f"Comando '{comando}' enviado al {nodo_destino} correctamente.", "success")
         
     except Exception as e:
-        flash(f"Error al enviar comando MQTT: {str(e)}", "danger")
-
+        flash(f"Error al enviar a Mosquitto: {str(e)}", "danger")
+    
     return redirect(url_for('panel_iot'))
